@@ -1,0 +1,37 @@
+name: RemoteLink
+options:
+  bundleIdPrefix: com.remotelink
+  deploymentTarget:
+    iOS: "16.0"
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: 2.0.0
+  WebRTC:
+    url: https://github.com/stasel/WebRTC
+    branch: latest
+targets:
+  RemoteLink:
+    type: application
+    platform: iOS
+    sources: [RemoteLink]
+    dependencies:
+      - package: Supabase
+        product: Supabase
+      - package: WebRTC
+        product: WebRTC
+    settings:
+      base:
+        SWIFT_VERSION: "5.0"
+        PRODUCT_BUNDLE_IDENTIFIER: com.remotelink.homeapp
+        TARGETED_DEVICE_FAMILY: "1"
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+    info:
+      path: RemoteLink/Info.plist
+      properties:
+        CFBundleDisplayName: RemoteLink
+        UILaunchScreen: {}
+        ITSAppUsesNonExemptEncryption: false
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSPhotoLibraryUsageDescription: RemoteLink lets your other signed-in devices browse and download your photos and videos from this iPhone.
