@@ -23,6 +23,8 @@ final class AppModel: ObservableObject {
     @Published var signalStatus = "Signaling: not started"
     @Published var linkStatus = "No remote device connected"
     @Published var checkInStatus = "No check-in yet"
+    @Published var received = 0
+    @Published var lastSignal = "none yet"
     @Published var message = ""
     @Published var photosStatusText = ""
 
@@ -127,7 +129,7 @@ final class AppModel: ObservableObject {
         let stream = ch.broadcastStream(event: "signal")
         channel = ch
         await ch.subscribe()
-        signalStatus = "Signaling: connected"
+        signalStatus = "Signaling: \(ch.status) (my id: \(thisDeviceId.map(String.init) ?? "none"))"
 
         signalTask = Task { [weak self] in
             for await message in stream {
@@ -135,6 +137,11 @@ final class AppModel: ObservableObject {
                 let decoder = JSONDecoder()
                 let signal = (try? decoder.decode(SignalEnvelope.self, from: data))?.payload
                     ?? (try? decoder.decode(SignalMessage.self, from: data))
+                await MainActor.run {
+                    self?.received += 1
+                    self?.lastSignal = signal.map { "\($0.type) from \($0.from ?? "?") to \($0.to ?? "?")" }
+                        ?? "undecodable: " + String(decoding: data.prefix(120), as: UTF8.self)
+                }
                 if let signal { await self?.handle(signal) }
             }
         }

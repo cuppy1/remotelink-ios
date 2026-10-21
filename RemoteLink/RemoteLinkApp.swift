@@ -80,6 +80,8 @@ struct HomeView: View {
             Section("Status") {
                 Text(model.signalStatus)
                 Text(model.linkStatus)
+                Text("Messages received: \(model.received)").font(.footnote)
+                Text("Last: \(model.lastSignal)").font(.footnote)
                 if !model.message.isEmpty { Text(model.message).font(.footnote) }
             }
             Section {
