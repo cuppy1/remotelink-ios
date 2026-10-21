@@ -1,9 +1,11 @@
 import Foundation
+import ImageIO
 import Photos
+import UIKit
 import UniformTypeIdentifiers
 
 struct ShareItem {
-    enum Source { case photo(PHAssetResource), file(URL) }
+    enum Source { case photo(PHAssetResource, PHAsset), file(URL) }
     let name: String
     let mime: String
     let size: Int64
@@ -57,7 +59,7 @@ final class ShareLibrary {
                 guard let r = res.first(where: { $0.type == .photo || $0.type == .video }) ?? res.first else { return }
                 let size = (r.value(forKey: "fileSize") as? NSNumber)?.int64Value ?? 0
                 let mime = UTType(r.uniformTypeIdentifier)?.preferredMIMEType ?? "application/octet-stream"
-                out.append(ShareItem(name: r.originalFilename, mime: mime, size: size, source: .photo(r)))
+                out.append(ShareItem(name: r.originalFilename, mime: mime, size: size, source: .photo(r, asset)))
             }
         }
         for bookmark in (UserDefaults.standard.array(forKey: bookmarksKey) as? [Data]) ?? [] {
@@ -78,12 +80,46 @@ final class ShareLibrary {
         return out
     }
 
+    // Small JPEG preview (about 300 px) so the remote device can show a gallery
+    func thumbnail(for item: ShareItem) async -> Data? {
+        switch item.source {
+        case .photo(_, let asset):
+            return await withCheckedContinuation { cont in
+                let opts = PHImageRequestOptions()
+                opts.deliveryMode = .highQualityFormat
+                opts.resizeMode = .exact
+                opts.isNetworkAccessAllowed = true
+                opts.isSynchronous = false
+                var done = false
+                PHImageManager.default().requestImage(
+                    for: asset, targetSize: CGSize(width: 300, height: 300),
+                    contentMode: .aspectFill, options: opts
+                ) { image, info in
+                    if done { return }
+                    if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
+                    done = true
+                    cont.resume(returning: image?.jpegData(compressionQuality: 0.6))
+                }
+            }
+        case .file(let url):
+            guard item.mime.hasPrefix("image/"),
+                  let src = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+            let opts: [CFString: Any] = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: 300
+            ]
+            guard let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) else { return nil }
+            return UIImage(cgImage: cg).jpegData(compressionQuality: 0.6)
+        }
+    }
+
     // Returns a readable file URL, and whether it is a temporary copy to delete afterwards
     func exportToTemp(_ item: ShareItem) async throws -> (URL, Bool) {
         switch item.source {
         case .file(let url):
             return (url, false)
-        case .photo(let resource):
+        case .photo(let resource, _):
             let tmp = FileManager.default.temporaryDirectory
                 .appendingPathComponent(UUID().uuidString + "-" + resource.originalFilename)
             let opts = PHAssetResourceRequestOptions()

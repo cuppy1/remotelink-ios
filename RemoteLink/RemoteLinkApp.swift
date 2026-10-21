@@ -77,7 +77,7 @@ struct HomeView: View {
                     Button("Remove added folders", role: .destructive) { model.removeFolders() }
                 }
             }
-            Section("Status (build 3)") {
+            Section("Status (build 4)") {
                 Text(model.signalStatus)
                 Button("Reconnect signaling") { Task { await model.startSignaling() } }
                 Text(model.linkStatus)

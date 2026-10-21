@@ -158,6 +158,13 @@ final class PeerSession: NSObject, RTCPeerConnectionDelegate, RTCDataChannelDele
                 ["id": $0.offset, "name": $0.element.name, "size": $0.element.size, "type": $0.element.mime]
             }
             sendJSON(["t": "list", "files": files])
+        case "thumb-req":
+            guard let id = obj["id"] as? Int, items.indices.contains(id) else { return }
+            if let data = await library.thumbnail(for: items[id]) {
+                sendJSON(["t": "thumb", "id": id, "data": data.base64EncodedString()])
+            } else {
+                sendJSON(["t": "thumb", "id": id])
+            }
         case "get":
             guard let id = obj["id"] as? Int, items.indices.contains(id) else {
                 sendJSON(["t": "error", "msg": "That file is no longer available."])
