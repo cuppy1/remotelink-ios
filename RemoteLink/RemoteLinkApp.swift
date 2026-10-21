@@ -77,8 +77,9 @@ struct HomeView: View {
                     Button("Remove added folders", role: .destructive) { model.removeFolders() }
                 }
             }
-            Section("Status") {
+            Section("Status (build 3)") {
                 Text(model.signalStatus)
+                Button("Reconnect signaling") { Task { await model.startSignaling() } }
                 Text(model.linkStatus)
                 Text("Messages received: \(model.received)").font(.footnote)
                 Text("Last: \(model.lastSignal)").font(.footnote)
